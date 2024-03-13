@@ -138,7 +138,8 @@
             value="04B0267AE05C87"
           />
           <label>Connector uid</label>
-          <input id="CUID" type="text" placeholder="Connector uid" value="1" />
+          <input id="CUID" type="text" placeholder="Connector uid" value="" />
+          <input id="CUID2" type="text" placeholder="Connector uid 2" value="" />
           <h2>Actions</h2>
           <button id="connect">Connect</button>
           <button id="send">Authorize</button>
@@ -312,13 +313,16 @@
                     // Lógica para iniciar la transacción en el conector específico
                     
                   
-                  if (connectorId === parseInt($("#CUID").val())){
+                  if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
                     console.log('Reconoció el cargador')
-                    stopTransaction();
+                    stopTransaction(connectorId);
+                    console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
+
                     $(".indicator").hide();
                     $("#yellow").show();
 
                   }
+
                   break;
                 case "RemoteStartTransaction":
                   /* //Need to get idTag, connectorId (map - ddata[3])
@@ -338,9 +342,11 @@
                     _websocket.send(remStrt);
                     // Lógica para iniciar la transacción en el conector específico
                   
-                    if (connectorId === parseInt($("#CUID").val())){
-                      startTransaction()
+                  if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
+                    console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
+                      startTransaction(connectorId)
                     }
+
 
                   break;
                 case "UnlockConnector": /////////ERROR!!!!!!!!
@@ -414,13 +420,13 @@
         _websocket.send(Auth);
       }
 
-      function startTransaction() {
+      function startTransaction(connId = parseInt($("#CUID").val())) {
         sessionStorage.setItem("LastAction", "startTransaction");
         $(".indicator").hide();
         $("#green").show();
         connector_locked = true;
         logMsg("Connector status changed to: " + connector_locked);
-        var connectorId = parseInt($("#CUID").val());
+        var connectorId = connId;
         console.log("connectorId", connectorId);
         var strtT = JSON.stringify([
           2, 
@@ -437,7 +443,7 @@
         _websocket.send(strtT);
       }
 
-      function stopTransaction() {
+      function stopTransaction(connId = parseInt($("#CUID").val())) {
         sessionStorage.setItem("LastAction", "stopTransaction");
         $(".indicator").hide();
         connector_locked = false;

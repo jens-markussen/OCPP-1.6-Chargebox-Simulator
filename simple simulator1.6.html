@@ -304,11 +304,11 @@
 
                     // Asumiendo que ddata[3] incluye el connectorId y el idTag necesario para la acción
                     var connectorId = ddata[4].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
-                    var idTag = ddata[3].idTag;
+                    var idTag = ddata[4].idTag;
                     
                     // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
                     // Esta es solo una plantilla básica de cómo podría verse el mensaje
-                    var remStrt = JSON.stringify([3, id, { status: "Accepted" }]);
+                    var remStrt = JSON.stringify([3, ddata[1], { status: "Accepted" }]);
                     _websocket.send(remStrt);
                     // Lógica para iniciar la transacción en el conector específico
                     
@@ -334,11 +334,11 @@
                   var connectorId = ddata[4].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
                   console.log(ddata)
 
-                  var idTag = ddata[3].idTag;
+                  var idTag = ddata[4].idTag;
                     
                     // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
                     // Esta es solo una plantilla básica de cómo podría verse el mensaje
-                    var remStrt = JSON.stringify([3, id, { status: "Accepted" }]);
+                    var remStrt = JSON.stringify([3, ddata[1], { status: "Accepted" }]);
                     _websocket.send(remStrt);
                     // Lógica para iniciar la transacción en el conector específico
                   

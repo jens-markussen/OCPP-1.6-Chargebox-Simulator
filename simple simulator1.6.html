@@ -303,8 +303,8 @@
                   $("#transactionId").val(JSON.parse(msg.data)[3].transactionId); */
 
                     // Asumiendo que ddata[3] incluye el connectorId y el idTag necesario para la acción
-                    var connectorId = ddata[4].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
-                    var idTag = ddata[4].idTag;
+                    var connectorId = ddata[3].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
+                    var idTag = ddata[3].idTag;
                     
                     // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
                     // Esta es solo una plantilla básica de cómo podría verse el mensaje
@@ -331,10 +331,10 @@
                   _websocket.send(remStrt); */
 
                   // Asumiendo que ddata[3] incluye el connectorId y el idTag necesario para la acción
-                  var connectorId = ddata[4].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
+                  var connectorId = ddata[3].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
                   console.log(ddata)
 
-                  var idTag = ddata[4].idTag;
+                  var idTag = ddata[3].idTag;
                     
                     // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
                     // Esta es solo una plantilla básica de cómo podría verse el mensaje

@@ -344,7 +344,7 @@
                   
                   if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
                     console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
-                      startTransaction(connectorId)
+                      startTransaction(connectorId, idTag)
                     }
 
 
@@ -420,7 +420,7 @@
         _websocket.send(Auth);
       }
 
-      function startTransaction(connId = parseInt($("#CUID").val())) {
+      function startTransaction(connId = parseInt($("#CUID").val()), idTag) {
         sessionStorage.setItem("LastAction", "startTransaction");
         $(".indicator").hide();
         $("#green").show();
@@ -434,7 +434,7 @@
           "StartTransaction",
           {
             connectorId: connectorId,
-            idTag: $("#TAG").val(),
+            idTag: idTag,
             timestamp: new Date().toISOString(),
             meterStart: parseInt($("#metervalue").val()),
             reservationId: 0,

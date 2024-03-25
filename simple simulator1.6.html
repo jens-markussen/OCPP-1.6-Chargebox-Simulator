@@ -313,15 +313,13 @@
                     // Lógica para iniciar la transacción en el conector específico
                     
                   
-                  if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
-                    console.log('Reconoció el cargador')
-                    stopTransaction(connectorId);
-                    console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
+                 
+                    stopTransaction(idTag);
 
                     $(".indicator").hide();
                     $("#yellow").show();
 
-                  }
+                  
 
                   break;
                 case "RemoteStartTransaction":
@@ -443,7 +441,7 @@
         _websocket.send(strtT);
       }
 
-      function stopTransaction(connId = parseInt($("#CUID").val())) {
+      function stopTransaction(idTag) {
         sessionStorage.setItem("LastAction", "stopTransaction");
         $(".indicator").hide();
         connector_locked = false;
@@ -455,7 +453,7 @@
           "StopTransaction",
           {
             transactionId: Number($("#transactionId").val()),
-            idTag: $("#TAG").val(),
+            idTag: idTag? idTag : $("#TAG").val(),
             timestamp: new Date().toISOString(),
             meterStop: parseInt($("#metervalue").val()),
           },

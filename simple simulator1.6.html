@@ -456,6 +456,32 @@
             idTag: idTag? idTag : $("#TAG").val(),
             timestamp: new Date().toISOString(),
             meterStop: parseInt($("#metervalue").val()),
+            reason: "EVDisconnected",
+            transactionData: [
+              {
+                timestamp: "2024-03-26T18:30:00Z",
+                sampledValue: [
+                  {
+                    value: 5000,
+                    context: "Transaction.Begin",
+                    format: "Raw",
+                    measurand: "Energy.Active.Import.Register",
+                    phase: "L1",
+                    location: "Outlet",
+                    unit: "Wh"
+                  },
+                  {
+                    value: "15680",
+                    context: "Transaction.End",
+                    format: "Raw",
+                    measurand: "Energy.Active.Import.Register",
+                    phase: "L1",
+                    location: "Outlet",
+                    unit: "Wh"
+                  }
+                ]
+              }
+            ],
           },
         ]);
         _websocket.send(stpT);

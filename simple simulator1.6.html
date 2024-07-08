@@ -138,7 +138,8 @@
             value="04B0267AE05C87"
           />
           <label>Connector uid</label>
-          <input id="CUID" type="text" placeholder="Connector uid" value="1" />
+          <input id="CUID" type="text" placeholder="Connector uid" value="" />
+          <input id="CUID2" type="text" placeholder="Connector uid 2" value="" />
           <h2>Actions</h2>
           <button id="connect">Connect</button>
           <button id="send">Authorize</button>
@@ -276,6 +277,7 @@
                 logMsg("TransactionId: " + transactionId);
                 console.log("TransactionId: " + JSON.stringify(transactionId));
                 document.getElementById("ConnectorStatus").value = "Charging";
+
               }
               if (la === "stopTransaction") {
                 document.getElementById("ConnectorStatus").value = "Charging";
@@ -295,22 +297,91 @@
                   location.reload();
                   break;
                 case "RemoteStopTransaction":
-                  //TransactionID
+                  /* //TransactionID
                   var remStp = JSON.stringify([3, id, { status: "Accepted" }]);
                   _websocket.send(remStp);
 
-                  $("#transactionId").val(JSON.parse(msg.data)[3].transactionId);
+                  $("#transactionId").val(JSON.parse(msg.data)[3].transactionId); */
+
+                    // Asumiendo que ddata[3] incluye el connectorId y el idTag necesario para la acción
+                    var connectorId = ddata[3].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
+                    var idTag = ddata[3].idTag;
+                    
+                    // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
+                    // Esta es solo una plantilla básica de cómo podría verse el mensaje
+                    var remStrt = JSON.stringify([3, ddata[1], { status: "Accepted" }]);
+                    _websocket.send(remStrt);
+                    // Lógica para iniciar la transacción en el conector específico
+                    
                   
-                  stopTransaction();
-                  $(".indicator").hide();
-                  $("#yellow").show();
+                 
+                    stopTransaction(idTag);
+
+                    var SN = JSON.stringify([
+                          2,
+                          idTag,
+                          "StatusNotification",
+                          {
+                            connectorId: parseInt($("#CUID").val()),
+                            status: 'Avalaible',
+                            errorCode: "NoError",
+                            info: "",
+                            timestamp: new Date().toISOString(),
+                            vendorId: "",
+                            vendorErrorCode: "",
+                          },
+                        ]);
+                        _websocket.send(SN);
+
+                    $(".indicator").hide();
+                    $("#yellow").show();
+
+                  
+
                   break;
                 case "RemoteStartTransaction":
-                  //Need to get idTag, connectorId (map - ddata[3])
+                  /* //Need to get idTag, connectorId (map - ddata[3])
                   $("#TAG").val(ddata[3].idTag);
                   var remStrt = JSON.stringify([3, id, { status: "Accepted" }]);
-                  _websocket.send(remStrt);
-                  startTransaction();
+                  _websocket.send(remStrt); */
+
+                  // Asumiendo que ddata[3] incluye el connectorId y el idTag necesario para la acción
+                  var connectorId = ddata[3].connectorId; // Asegúrate de que esto se ajuste a tu estructura de datos
+                  console.log(ddata)
+
+                  var idTag = ddata[3].idTag;
+                    
+                    // Aquí, necesitarías lógica específica para manejar el inicio de transacción en el conector indicado
+                    // Esta es solo una plantilla básica de cómo podría verse el mensaje
+                    var remStrt = JSON.stringify([3, ddata[1], { status: "Accepted" }]);
+                    _websocket.send(remStrt);
+                    // Lógica para iniciar la transacción en el conector específico
+                  
+                  if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
+                    console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
+                      startTransaction(connectorId, idTag)
+
+
+                      var SN = JSON.stringify([
+                          2,
+                          idTag,
+                          "StatusNotification",
+                          {
+                            connectorId: parseInt($("#CUID").val()),
+                            status: 'Charging',
+                            errorCode: "NoError",
+                            info: "",
+                            timestamp: new Date().toISOString(),
+                            vendorId: "",
+                            vendorErrorCode: "",
+                          },
+                        ]);
+                        _websocket.send(SN);
+
+                        console.log(SN)
+                      
+                    }
+
 
                   break;
                 case "UnlockConnector": /////////ERROR!!!!!!!!
@@ -384,13 +455,13 @@
         _websocket.send(Auth);
       }
 
-      function startTransaction() {
+      function startTransaction(connId = parseInt($("#CUID").val()), idTag) {
         sessionStorage.setItem("LastAction", "startTransaction");
         $(".indicator").hide();
         $("#green").show();
         connector_locked = true;
         logMsg("Connector status changed to: " + connector_locked);
-        var connectorId = parseInt($("#CUID").val());
+        var connectorId = connId;
         console.log("connectorId", connectorId);
         var strtT = JSON.stringify([
           2, 
@@ -398,7 +469,7 @@
           "StartTransaction",
           {
             connectorId: connectorId,
-            idTag: $("#TAG").val(),
+            idTag: idTag,
             timestamp: new Date().toISOString(),
             meterStart: parseInt($("#metervalue").val()),
             reservationId: 0,
@@ -407,7 +478,7 @@
         _websocket.send(strtT);
       }
 
-      function stopTransaction() {
+      function stopTransaction(idTag) {
         sessionStorage.setItem("LastAction", "stopTransaction");
         $(".indicator").hide();
         connector_locked = false;
@@ -419,9 +490,35 @@
           "StopTransaction",
           {
             transactionId: Number($("#transactionId").val()),
-            idTag: $("#TAG").val(),
+            idTag: idTag? idTag : $("#TAG").val(),
             timestamp: new Date().toISOString(),
             meterStop: parseInt($("#metervalue").val()),
+            reason: "EVDisconnected",
+            transactionData: [
+              {
+                timestamp: "2024-03-26T18:30:00Z",
+                sampledValue: [
+                  {
+                    value: 5000,
+                    context: "Transaction.Begin",
+                    format: "Raw",
+                    measurand: "Energy.Active.Import.Register",
+                    phase: "L1",
+                    location: "Outlet",
+                    unit: "Wh"
+                  },
+                  {
+                    value: "15680",
+                    context: "Transaction.End",
+                    format: "Raw",
+                    measurand: "Energy.Active.Import.Register",
+                    phase: "L1",
+                    location: "Outlet",
+                    unit: "Wh"
+                  }
+                ]
+              }
+            ],
           },
         ]);
         _websocket.send(stpT);
@@ -490,7 +587,7 @@
           id,
           "MeterValues",
           {
-            connectorId: 1,
+            connectorId: parseInt($("#CUID").val()),
             transactionId: Number($("#transactionId").val()),
             meterValue: [
               {

@@ -277,6 +277,7 @@
                 logMsg("TransactionId: " + transactionId);
                 console.log("TransactionId: " + JSON.stringify(transactionId));
                 document.getElementById("ConnectorStatus").value = "Charging";
+
               }
               if (la === "stopTransaction") {
                 document.getElementById("ConnectorStatus").value = "Charging";
@@ -316,6 +317,22 @@
                  
                     stopTransaction(idTag);
 
+                    var SN = JSON.stringify([
+                          2,
+                          idTag,
+                          "StatusNotification",
+                          {
+                            connectorId: parseInt($("#CUID").val()),
+                            status: 'Avalaible',
+                            errorCode: "NoError",
+                            info: "",
+                            timestamp: new Date().toISOString(),
+                            vendorId: "",
+                            vendorErrorCode: "",
+                          },
+                        ]);
+                        _websocket.send(SN);
+
                     $(".indicator").hide();
                     $("#yellow").show();
 
@@ -343,6 +360,26 @@
                   if (connectorId === parseInt($("#CUID").val()) || connectorId === parseInt($("#CUID2").val())  ){
                     console.log( connectorId === '1' ? 'Cargador 1' :'Cargador 2')
                       startTransaction(connectorId, idTag)
+
+
+                      var SN = JSON.stringify([
+                          2,
+                          idTag,
+                          "StatusNotification",
+                          {
+                            connectorId: parseInt($("#CUID").val()),
+                            status: 'Charging',
+                            errorCode: "NoError",
+                            info: "",
+                            timestamp: new Date().toISOString(),
+                            vendorId: "",
+                            vendorErrorCode: "",
+                          },
+                        ]);
+                        _websocket.send(SN);
+
+                        console.log(SN)
+                      
                     }
 
 

@@ -128,17 +128,17 @@
             id="CP"
             type="text"
             placeholder="Id Station"
-            value="ws://localhost:3000/EVB-P20261797"
+            value="ws://localhost:9999/TACW2243121G2674"
           />
           <label>Tag</label
           ><input
             id="TAG"
             type="text"
             placeholder="Tag"
-            value="04B0267AE05C87"
+            value="6CD30D19"
           />
           <label>Connector uid</label>
-          <input id="CUID" type="text" placeholder="Connector uid" value="" />
+          <input id="CUID" type="text" placeholder="Connector uid" value="1" />
           <input id="CUID2" type="text" placeholder="Connector uid 2" value="" />
           <h2>Actions</h2>
           <button id="connect">Connect</button>
@@ -151,7 +151,7 @@
             id="metervalue"
             type="text"
             placeholder="Meter value"
-            value="1"
+            value="15.8"
           />
 
           <label>transactionId</label>
@@ -230,9 +230,17 @@
       var id = randomId();
       var _websocket = null;
       var connector_locked = false;
-
+      var offer = 0 // A
       
+      function getRandomArbitrary(min, max) {
+          return Math.floor(Math.random() * (max - min) + min);
+      }
+
       function randomId() {
+        return getRandomArbitrary(1000000, 9999999).toString()
+      }
+
+      function randomId_() {  // old
         id = "";
         for (var i = 0; i < 36; i++) {
           id += possible.charAt(Math.floor(Math.random() * possible.length));
@@ -276,12 +284,14 @@
                 $("#transactionId").val(transactionId);
                 logMsg("TransactionId: " + transactionId);
                 console.log("TransactionId: " + JSON.stringify(transactionId));
+                offer = 0
                 document.getElementById("ConnectorStatus").value = "Charging";
 
               }
               if (la === "stopTransaction") {
                 document.getElementById("ConnectorStatus").value = "Charging";
               }
+              offer = 0
               logMsg("Response: " + JSON.stringify(ddata[2]));
             } else if (JSON.parse(msg.data)[0] === 4) {
               logMsg("Data exchange failed - JSON is not accepted!");
@@ -323,7 +333,7 @@
                           "StatusNotification",
                           {
                             connectorId: parseInt($("#CUID").val()),
-                            status: 'Avalaible',
+                            status: 'Available',
                             errorCode: "NoError",
                             info: "",
                             timestamp: new Date().toISOString(),
@@ -409,6 +419,22 @@
                   }
 
                   break;
+                case "SetChargingProfile":
+                  profile = ddata[3].csChargingProfiles;
+                  console.log("Profile:");
+                  console.log(profile);
+                  if (profile.chargingProfilePurpose == "TxProfile") {
+                    offer = profile.chargingSchedule.chargingSchedulePeriod[0].limit
+                    logMsg("TxProfile set offer to " + offer);
+                  }
+
+                  var answer = JSON.stringify([3, id, { status: "Accepted" }]);
+                  _websocket.send(answer)
+                  break;
+                case "ClearChargingProfile":
+                  var answer = JSON.stringify([3, id, { status: "Accepted" }]);
+                  _websocket.send(answer)
+                  break;
                 default:
                   var error = JSON.stringify([4, id]);
                   _websocket.send(error);
@@ -469,7 +495,7 @@
           "StartTransaction",
           {
             connectorId: connectorId,
-            idTag: idTag,
+            idTag: idTag? idTag : $("#TAG").val(),
             timestamp: new Date().toISOString(),
             meterStart: parseInt($("#metervalue").val()),
             reservationId: 0,
@@ -499,7 +525,7 @@
                 timestamp: "2024-03-26T18:30:00Z",
                 sampledValue: [
                   {
-                    value: 5000,
+                    value: "5000",
                     context: "Transaction.Begin",
                     format: "Raw",
                     measurand: "Energy.Active.Import.Register",
@@ -548,11 +574,11 @@
           id,
           "BootNotification",
           {
-            chargePointVendor: "AVT-Company",
-            chargePointModel: "AVT-Express",
+            chargePointVendor: "ABB",
+            chargePointModel: "CDT_TACW22::NET_WIFI",
             chargePointSerialNumber: "avt.001.13.1",
             chargeBoxSerialNumber: "avt.001.13.1.01",
-            firmwareVersion: "0.9.87",
+            firmwareVersion: "TAC3Z9118906710247::V1.8.21",
             iccid: "",
             imsi: "",
             meterType: "AVT NQC-ACDC",
@@ -572,32 +598,132 @@
 
       function send_heartbeat() {
         sessionStorage.setItem("LastAction", "Heartbeat");
-        var HB = JSON.stringify([2, id, "Heartbeat", {}]);
+        var HB = JSON.stringify([2, randomId(), "Heartbeat", {}]);
         _websocket.send(HB);
       }
 
       function send_meterValue() {
         console.log("mv");
+        id = randomId()
 
         sessionStorage.setItem("LastAction", "MeterValues");
-        var val = $("#metervalue").val();
-        console.log(1);
+        var val = parseFloat($("#metervalue").val());
         var MV = JSON.stringify([
-          2, 
+          2,
           id,
           "MeterValues",
           {
             connectorId: parseInt($("#CUID").val()),
             transactionId: Number($("#transactionId").val()),
-            meterValue: [
+            "meterValue": [
               {
                 timestamp: new Date().toISOString(),
-                sampledValue: [{ value: val }],
-              },
-            ],
-          },
-        ]);
-
+                "sampledValue": [
+                  {
+                    "value": "228.80",
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Voltage",
+                    "phase": "L1-N",
+                    "unit": "V"
+                  },
+                  {
+                    "value": val.toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Current.Import",
+                    "phase": "L1",
+                    "unit": "A"
+                  },
+                  {
+                    "value": (val * 230).toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Power.Active.Import",
+                    "phase": "L1",
+                    "unit": "W"
+                  },
+                  {
+                    "value": "230.10",
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Voltage",
+                    "phase": "L2-N",
+                    "unit": "V"
+                  },
+                  {
+                    "value": val.toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Current.Import",
+                    "phase": "L2",
+                    "unit": "A"
+                  },
+                  {
+                    "value": (val * 230).toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Power.Active.Import",
+                    "phase": "L2",
+                    "unit": "W"
+                  },
+                  {
+                    "value": "230.20",
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Voltage",
+                    "phase": "L3-N",
+                    "unit": "V"
+                  },
+                  {
+                    "value": val.toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Current.Import",
+                    "phase": "L3",
+                    "unit": "A"
+                  },
+                  {
+                    "value": (val * 230).toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Power.Active.Import",
+                    "phase": "L3",
+                    "unit": "W"
+                  },
+                  {
+                    "value": "169",
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Energy.Active.Import.Register",
+                    "unit": "Wh"
+                  },
+                  {
+                    "value": offer.toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Current.Offered",
+                    "unit": "A"
+                  },
+                  {
+                    "value": (val * 3).toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Current.Import",
+                    "unit": "A"
+                  },
+                  {
+                    "value": (val * 3 * 230).toString(),
+                    "context": "Sample.Periodic",
+                    "format": "Raw",
+                    "measurand": "Power.Active.Import",
+                    "unit": "W"
+                  }
+                ]
+              }
+            ]
+          }
+        ])
         console.log(2, MV);
         _websocket.send(MV);
       }
@@ -657,7 +783,7 @@
           console.log("sss", $("#ConnectorStatus").val());
           var SN = JSON.stringify([
             2,
-            id,
+            randomId(),
             "StatusNotification",
             {
               connectorId: parseInt($("#CUID").val()),
@@ -676,7 +802,7 @@
           sessionStorage.setItem("LastAction", "DataTransfer");
           var DT = JSON.stringify([
             2,
-            id,
+            randomId(),
             "DataTransfer",
             {
               vendorId: "rus.avt.cp",

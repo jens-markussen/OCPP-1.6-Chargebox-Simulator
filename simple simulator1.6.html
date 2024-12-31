@@ -270,7 +270,7 @@
             if (c == 1) {
               var hb_interval = handleData(ddata);
               sessionStorage.setItem("Configuration", hb_interval);
-              bh_interval = max(hb_interval, 120)
+              bh_interval = Math.max(hb_interval, 120)
               startHB(hb_interval * 1000);
             }
 

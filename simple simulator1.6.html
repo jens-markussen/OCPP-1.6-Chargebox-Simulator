@@ -772,7 +772,7 @@
           }
         ];
         status = $("#ConnectorStatus").val();
-        if (status == "Charging" || status == "SuspendedEV" || status == "SuspendedEVSE") {
+        if (status == "Charging" || status == "SuspendedEV" || status == "SuspendedEVSE" || status == "Preparing") {
           MV_OBJ[3]["transactionId"] = Number($("#transactionId").val())
         }
 

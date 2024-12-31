@@ -55,17 +55,6 @@
       #yellow {
         background-color: yellow;
       }
-      .title {
-        color: #27a3ac;
-        text-align: center;
-        animation: changeColor ease;
-        animation-iteration-count: infinite;
-        animation-duration: 4s;
-        animation-fill-mode: both;
-        font-size: 48px;
-        padding: 0;
-        margin: 0;
-      }
       .subTitle {
         text-align: center;
         font-size: large;
@@ -116,8 +105,6 @@
 
   <body>
     <div class="wrapper">
-      <h1 class="title">INFINITY</h1>
-      <p class="subTitle">Simple OCPP 1.6 Chargebox Simulator</p>
       <select style="display: none">
         <option value="">OCPP-J1.6</option>
       </select>
@@ -128,7 +115,7 @@
             id="CP"
             type="text"
             placeholder="Id Station"
-            value="ws://localhost:9999/TACW2243121G2674"
+            value="ws://balanz.fritz.box:9999/TACW2243121G2674"
           />
           <label>Tag</label
           ><input
@@ -137,9 +124,27 @@
             placeholder="Tag"
             value="6CD30D19"
           />
-          <label>Connector uid</label>
-          <input id="CUID" type="text" placeholder="Connector uid" value="1" />
-          <input id="CUID2" type="text" placeholder="Connector uid 2" value="" />
+          <h2>Status</h2>
+          <label>Connector Status</label>
+          <select name="ConnectorStatus" id="ConnectorStatus">
+            <option value="Available">Available</option>
+            <option value="Preparing">Preparing</option>
+            <option value="Charging">Charging</option>
+            <option value="SuspendedEV">SuspendedEV</option>
+            <option value="SuspendedEVSE">SuspendedEVSE</option>
+            <option value="Finishing">Finishing</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Faulted">Faulted</option>
+            <option value="Offline">Offline</option>
+          </select>
+          <label>Offer</label>
+          <input
+            id="offer"
+            type="text"
+            placeholder="offer in A"
+            value="0"
+          />
+          
           <h2>Actions</h2>
           <button id="connect">Connect</button>
           <button id="send">Authorize</button>
@@ -161,19 +166,6 @@
             placeholder="transactionId"
             value="1"
           />
-          <label>Connector Status</label>
-
-          <select name="ConnectorStatus" id="ConnectorStatus">
-            <option value="Available">Available</option>
-            <option value="Preparing">Preparing</option>
-            <option value="Charging">Charging</option>
-            <option value="SuspendedEV">SuspendedEV</option>
-            <option value="SuspendedEVSE">SuspendedEVSE</option>
-            <option value="Finishing">Finishing</option>
-            <option value="Reserved">Reserved</option>
-            <option value="Faulted">Faulted</option>
-            <option value="Offline">Offline</option>
-          </select>
           <button id="mv">Send Meter Values</button>
           <div class="metervalues">
             <p class="meterTexts">Increment value</p>
@@ -230,7 +222,6 @@
       var id = randomId();
       var _websocket = null;
       var connector_locked = false;
-      var offer = 0 // A
       
       function getRandomArbitrary(min, max) {
           return Math.floor(Math.random() * (max - min) + min);
@@ -256,7 +247,7 @@
           $("#red").show();
           _websocket.close(3001);
         } else {
-          _websocket = new WebSocket(wsurl + "" + CP, ["ocpp1.6", "ocpp1.5"]);
+          _websocket = new WebSocket(wsurl + "" + CP, ["ocpp1.6"]);
           _websocket.onopen = function (authorizationData) {
             sessionStorage.setItem("LastAction", "BootNotification");
             $("#yellow").show();
@@ -272,6 +263,7 @@
             if (c == 1) {
               var hb_interval = handleData(ddata);
               sessionStorage.setItem("Configuration", hb_interval);
+              bh_interval = max(hb_interval, 120)
               startHB(hb_interval * 1000);
             }
 
@@ -284,14 +276,23 @@
                 $("#transactionId").val(transactionId);
                 logMsg("TransactionId: " + transactionId);
                 console.log("TransactionId: " + JSON.stringify(transactionId));
-                offer = 0
-                document.getElementById("ConnectorStatus").value = "Charging";
+                document.getElementById("offer").value = 0
+                document.getElementById("ConnectorStatus").value = "SuspendedEVSE";
+                send_status_notification();
 
               }
               if (la === "stopTransaction") {
-                document.getElementById("ConnectorStatus").value = "Charging";
+                document.getElementById("ConnectorStatus").value = "Available";
+                document.getElementById("offer").value = 0
+                send_status_notification();
+
               }
-              offer = 0
+
+              if (la == "Authorize") {
+                document.getElementById("ConnectorStatus").value = "Preparing";
+                send_status_notification();
+              }
+
               logMsg("Response: " + JSON.stringify(ddata[2]));
             } else if (JSON.parse(msg.data)[0] === 4) {
               logMsg("Data exchange failed - JSON is not accepted!");
@@ -423,13 +424,18 @@
                   profile = ddata[3].csChargingProfiles;
                   console.log("Profile:");
                   console.log(profile);
+                  var answer = JSON.stringify([3, id, { status: "Accepted" }]);
+                  _websocket.send(answer)
+
                   if (profile.chargingProfilePurpose == "TxProfile") {
                     offer = profile.chargingSchedule.chargingSchedulePeriod[0].limit
                     logMsg("TxProfile set offer to " + offer);
+                    document.getElementById("offer").value = offer
+                    document.getElementById("metervalue").value = (parseFloat(offer) * 0.991).toString()
                   }
 
-                  var answer = JSON.stringify([3, id, { status: "Accepted" }]);
-                  _websocket.send(answer)
+                  document.getElementById("ConnectorStatus").value = "Charging";
+                  send_status_notification();
                   break;
                 case "ClearChargingProfile":
                   var answer = JSON.stringify([3, id, { status: "Accepted" }]);
@@ -481,7 +487,7 @@
         _websocket.send(Auth);
       }
 
-      function startTransaction(connId = parseInt($("#CUID").val()), idTag) {
+      function startTransaction(connId = 1, idTag) {
         sessionStorage.setItem("LastAction", "startTransaction");
         $(".indicator").hide();
         $("#green").show();
@@ -552,6 +558,8 @@
 
       function handleData(data, request = false) {
         var lastAction = getLastAction();
+
+
         if ((lastAction = "BootNotification")) {
           data = data[2];
           heartbeat_interval = data.interval;
@@ -602,18 +610,40 @@
         _websocket.send(HB);
       }
 
+      function send_status_notification() {
+          sessionStorage.setItem("LastAction", "StatusNotification");
+          console.log("sss", $("#ConnectorStatus").val());
+          var SN = JSON.stringify([
+            2,
+            randomId(),
+            "StatusNotification",
+            {
+              connectorId: 1,
+              status: $("#ConnectorStatus").val(),
+              errorCode: "NoError",
+              info: "",
+              timestamp: new Date().toISOString(),
+              vendorId: "",
+              vendorErrorCode: "",
+            },
+          ]);
+          _websocket.send(SN);
+        }
+
+
       function send_meterValue() {
         console.log("mv");
         id = randomId()
 
         sessionStorage.setItem("LastAction", "MeterValues");
         var val = parseFloat($("#metervalue").val());
+        var offer = $("#offer").val();
         var MV = JSON.stringify([
           2,
           id,
           "MeterValues",
           {
-            connectorId: parseInt($("#CUID").val()),
+            connectorId: 1,
             transactionId: Number($("#transactionId").val()),
             "meterValue": [
               {
@@ -699,7 +729,7 @@
                     "unit": "Wh"
                   },
                   {
-                    "value": offer.toString(),
+                    "value": offer,
                     "context": "Sample.Periodic",
                     "format": "Raw",
                     "measurand": "Current.Offered",
@@ -778,25 +808,7 @@
           send_heartbeat();
         });
 
-        $("#status").click(function () {
-          sessionStorage.setItem("LastAction", "StatusNotification");
-          console.log("sss", $("#ConnectorStatus").val());
-          var SN = JSON.stringify([
-            2,
-            randomId(),
-            "StatusNotification",
-            {
-              connectorId: parseInt($("#CUID").val()),
-              status: $("#ConnectorStatus").val(),
-              errorCode: "NoError",
-              info: "",
-              timestamp: new Date().toISOString(),
-              vendorId: "",
-              vendorErrorCode: "",
-            },
-          ]);
-          _websocket.send(SN);
-        });
+        $("#ConnectorStatus").change(send_status_notification);
 
         $("#data_transfer").click(function () {
           sessionStorage.setItem("LastAction", "DataTransfer");

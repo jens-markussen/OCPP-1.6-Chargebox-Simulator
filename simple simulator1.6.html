@@ -655,13 +655,13 @@
         sessionStorage.setItem("LastAction", "MeterValues");
         var val = parseFloat($("#metervalue").val());
         var offer = $("#offer").val();
-        var MV = JSON.stringify([
+        var MV_OBJ = 
+        [
           2,
           id,
           "MeterValues",
           {
             connectorId: 1,
-            transactionId: Number($("#transactionId").val()),
             "meterValue": [
               {
                 timestamp: new Date().toISOString(),
@@ -770,7 +770,14 @@
               }
             ]
           }
-        ])
+        ];
+        status = $("#ConnectorStatus").val();
+        if (status == "Charging" || status == "SuspendedEV" || status == "SuspendedEVSE") {
+          MV_OBJ[3]["transactionId"] = Number($("#transactionId").val())
+        }
+
+
+        var MV = JSON.stringify(MV_OBJ);
         console.log(2, MV);
         _websocket.send(MV);
       }

@@ -158,6 +158,13 @@
             placeholder="Meter value"
             value="15.8"
           />
+          <label>Max Meter value</label>
+          <input
+            id="maxmetervalue"
+            type="text"
+            placeholder="Meter value"
+            value="16"
+          />
 
           <label>transactionId</label>
           <input
@@ -268,6 +275,8 @@
             }
 
             if (ddata[0] === 3) {
+              logMsg("Response: " + JSON.stringify(ddata[2]));
+
               la = getLastAction();
 
               if (la == "startTransaction") {
@@ -288,12 +297,15 @@
 
               }
 
+              if (la == "StatusNotification") {
+                send_meterValue();
+              }
+
               if (la == "Authorize") {
                 document.getElementById("ConnectorStatus").value = "Preparing";
                 send_status_notification();
               }
 
-              logMsg("Response: " + JSON.stringify(ddata[2]));
             } else if (JSON.parse(msg.data)[0] === 4) {
               logMsg("Data exchange failed - JSON is not accepted!");
             } else if (JSON.parse(msg.data)[0] === 2) {
@@ -431,11 +443,16 @@
                     offer = profile.chargingSchedule.chargingSchedulePeriod[0].limit
                     logMsg("TxProfile set offer to " + offer);
                     document.getElementById("offer").value = offer
-                    document.getElementById("metervalue").value = (parseFloat(offer) * 0.991).toString()
+                    maxmeter = parseFloat($("#maxmetervalue").val());
+                    metervalue = Math.min(maxmeter * 0.9912, (parseFloat(offer) * 0.991));
+                    document.getElementById("metervalue").value = metervalue.toString();
+                    if (offer > 0) {
+                      document.getElementById("ConnectorStatus").value = "Charging";
+                      send_status_notification();
+                    }
                   }
 
-                  document.getElementById("ConnectorStatus").value = "Charging";
-                  send_status_notification();
+
                   break;
                 case "ClearChargingProfile":
                   var answer = JSON.stringify([3, id, { status: "Accepted" }]);

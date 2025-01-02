@@ -222,6 +222,7 @@
 
     <script>
       var timesRun = 0;
+      var transaction_energy = 0;
 
       var c = 0;
       var possible =
@@ -268,9 +269,9 @@
             var ddata = JSON.parse(msg.data);
             console.log(ddata);
             if (c == 1) {
-              var hb_interval = handleData(ddata);
+              var hb_interval = parseInt(handleData(ddata));
+              console.log("hb_interval", hb_interval)
               sessionStorage.setItem("Configuration", hb_interval);
-              bh_interval = Math.max(hb_interval, 120)
               startHB(hb_interval * 1000);
             }
 
@@ -288,6 +289,8 @@
                 document.getElementById("offer").value = 0
                 document.getElementById("ConnectorStatus").value = "SuspendedEVSE";
                 send_status_notification();
+                transaction_energy = 0; // Wh
+                transaction_energy_time = Date.now() / 1000; 
 
               }
               if (la === "stopTransaction") {
@@ -295,6 +298,10 @@
                 document.getElementById("offer").value = 0
                 send_status_notification();
 
+              }
+
+              if (la == "BootNotification") {
+                send_status_notification();
               }
 
               if (la == "StatusNotification") {
@@ -655,6 +662,13 @@
         sessionStorage.setItem("LastAction", "MeterValues");
         var val = parseFloat($("#metervalue").val());
         var offer = $("#offer").val();
+
+        if ($("#ConnectorStatus").val() == 'Charging') {
+            elapsed = Date.now() / 1000 - transaction_energy_time;
+            transaction_energy_time = Date.now() / 1000; 
+            transaction_energy += val * elapsed/3600
+        }
+
         var MV_OBJ = 
         [
           2,
@@ -739,7 +753,7 @@
                     "unit": "W"
                   },
                   {
-                    "value": "169",
+                    "value": transaction_energy.toString(),
                     "context": "Sample.Periodic",
                     "format": "Raw",
                     "measurand": "Energy.Active.Import.Register",
@@ -772,7 +786,7 @@
           }
         ];
         status = $("#ConnectorStatus").val();
-        if (status == "Charging" || status == "SuspendedEV" || status == "SuspendedEVSE" || status == "Preparing") {
+        if (status == "Charging" || status == "SuspendedEV" || status == "SuspendedEVSE") {
           MV_OBJ[3]["transactionId"] = Number($("#transactionId").val())
         }
 

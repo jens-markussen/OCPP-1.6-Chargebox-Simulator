@@ -344,6 +344,7 @@
               }
 
               if (la == "Authorize") {
+
                 document.getElementById("ConnectorStatus").value = "Preparing";
                 send_status_notification();
               }
@@ -530,7 +531,7 @@
               logMsg("ws connection error: " + evt.code);
               $("#console").html("");
               _websocket = null;
-              wsConnect();
+              setTimeout(wsConnect, 5000);  // wait 5 seconds before trying again
             }
           };
 
@@ -583,11 +584,19 @@
       }
 
       function stopTransaction(idTag) {
+        var val = parseFloat($("#metervalue").val());
+        if ($("#ConnectorStatus").val() == 'Charging') {
+            elapsed = Date.now() / 1000 - transaction_energy_time;
+            transaction_energy_time = Date.now() / 1000; 
+            transaction_energy += val * 3 * 230 * elapsed/3600
+        }
+
         sessionStorage.setItem("LastAction", "stopTransaction");
         $(".indicator").hide();
         connector_locked = false;
         logMsg("Connector status changed to: " + connector_locked);
-        $("#yellow").show();
+        $("#yellow").show(); 
+      
         var stpT = JSON.stringify([
           2,
           id,
@@ -596,7 +605,7 @@
             transactionId: Number($("#transactionId").val()),
             idTag: idTag? idTag : $("#TAG").val(),
             timestamp: new Date().toISOString(),
-            meterStop: parseInt($("#metervalue").val()),
+            meterStop: Number(Math.round(transaction_energy)),
             reason: "EVDisconnected",
             transactionData: [
               {
@@ -715,7 +724,7 @@
         if ($("#ConnectorStatus").val() == 'Charging') {
             elapsed = Date.now() / 1000 - transaction_energy_time;
             transaction_energy_time = Date.now() / 1000; 
-            transaction_energy += val * elapsed/3600
+            transaction_energy += val * 3 * 230 * elapsed/3600
         }
 
         var MV_OBJ = 

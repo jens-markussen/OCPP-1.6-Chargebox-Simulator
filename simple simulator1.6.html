@@ -12,7 +12,13 @@
         /* height: 100vh !important; */
       }
 
-      button,
+      button {
+        margin-bottom: 5px;
+        cursor: pointer;
+        height: 2rem;
+        width: 200px;
+
+      }
       input,
       select {
         width: 100%;
@@ -110,15 +116,25 @@
       </select>
       <div class="container">
         <div class="actions">
-          <label>Central Station</label
-          ><input
-            id="CP"
-            type="text"
-            placeholder="Id Station"
-            value="ws://balanz.fritz.box:9999/TACW2243121G2674"
-          />
-          <label>Tag</label
-          ><input
+          
+          <div class="metervalues">
+            <p class="meterTexts">Server URL</p>
+            <p class="meterTexts">Central Station</p>
+          </div>
+          <div class="metervalues">
+            <input id="SERVER" type="text" placeholder="Server" value="ws://localhost:9999/"/>
+            <input id="CP" type="text" placeholder="Station Id" value="TACW2243121G2674"/>
+          </div>
+
+          <div class="metervalues">
+            <p class="meterTexts">AuthorizationKey</p>
+          </div>
+
+          <div class="metervalues">
+            <input id="AKEY" type="text" placeholder="AuthorizationKey" value=""/>
+          </div>
+
+          <label>Tag</label><input
             id="TAG"
             type="text"
             placeholder="Tag"
@@ -151,14 +167,18 @@
           <button id="start">Start Transaction</button>
           <button id="stop">Stop Transaction</button>
           <button id="mv">Send Meter Values</button>
-          <label>Meter value</label>
-          <input
+          <div class="metervalues">
+            <p class="meterTexts">Meter value</p>
+            <p class="meterTexts">Max Meter value</p>
+            <p class="meterTexts">transactionId</p>
+          </div>
+          <div class="metervalues">
+            <input
             id="metervalue"
             type="text"
             placeholder="Meter value"
             value="15.8"
           />
-          <label>Max Meter value</label>
           <input
             id="maxmetervalue"
             type="text"
@@ -166,14 +186,14 @@
             value="16"
           />
 
-          <label>transactionId</label>
           <input
             id="transactionId"
             type="text"
             placeholder="transactionId"
             value="1"
           />
-          <div class="metervalues">
+        </div>
+        <div class="metervalues">
             <p class="meterTexts">Increment value</p>
             <p class="meterTexts">Time interval</p>
             <p class="meterTexts">Counter</p>
@@ -223,6 +243,7 @@
     <script>
       var timesRun = 0;
       var transaction_energy = 0;
+      var transaction_energy_time = 0;
 
       var c = 0;
       var possible =
@@ -247,15 +268,29 @@
         return id;
       }
 
+      function getAuthKey() {
+        key = localStorage.getItem($("#CP").val() + "_key");
+        console.log("key", key);
+        if (key == null) {
+          $("#AKEY").val("");
+        } else {
+          $("#AKEY").val(key);
+        }
+      }
+
       function wsConnect() {
-        var wsurl = $("select").val();
+        var wsurl = $("#SERVER").val();
         var CP = $("#CP").val();
+        console.log(wsurl + "" + CP);
+        auth_key = $("#AKEY").val();
+
+        auth_data = btoa(CP + ':' + auth_key).replaceAll("=", "");
 
         if (_websocket) {
           $("#red").show();
           _websocket.close(3001);
         } else {
-          _websocket = new WebSocket(wsurl + "" + CP, ["ocpp1.6"]);
+          _websocket = new WebSocket(wsurl + "" + CP, ["ocpp1.6", auth_data]);
           _websocket.onopen = function (authorizationData) {
             sessionStorage.setItem("LastAction", "BootNotification");
             $("#yellow").show();
@@ -465,8 +500,21 @@
                   var answer = JSON.stringify([3, id, { status: "Accepted" }]);
                   _websocket.send(answer)
                   break;
+                  // [2,"250107153242941","ChangeConfiguration",{"key":"AuthorizationKey","value":"[XQ/6lN6yHe;0uVEqV]0"}]
+                case "ChangeConfiguration":
+                  key = ddata[3]["key"]
+                  value = ddata[3]["value"]
+                  if (key == "AuthorizationKey") {
+                    localStorage.setItem($("#CP").val() + "_key", value);
+                    getAuthKey();                    
+                    console.log("Updating AuthorizationKey");
+                  }
+                  var answer = JSON.stringify([3, id, { status: "Accepted" }]);
+                  _websocket.send(answer);
+                  break;
+
                 default:
-                  var error = JSON.stringify([4, id]);
+                  var error = JSON.stringify([4, id, { status: "Rejected"}]);
                   _websocket.send(error);
                   break;
               }
@@ -631,6 +679,7 @@
       function send_heartbeat() {
         sessionStorage.setItem("LastAction", "Heartbeat");
         var HB = JSON.stringify([2, randomId(), "Heartbeat", {}]);
+
         _websocket.send(HB);
       }
 
@@ -848,6 +897,8 @@
 
         $("#ConnectorStatus").change(send_status_notification);
 
+        $("#CP").change(getAuthKey);
+
         $("#data_transfer").click(function () {
           sessionStorage.setItem("LastAction", "DataTransfer");
           var DT = JSON.stringify([
@@ -868,6 +919,8 @@
             _websocket.close(3001);
           }
         });
+        //localStorage.setItem($("#CP").val() + "_key", "very_secret");
+        getAuthKey();
       });
     </script>
   </body>

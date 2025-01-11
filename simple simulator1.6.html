@@ -278,13 +278,26 @@
         }
       }
 
+      // define a function that converts a string to hex
+      const stringToHex = (str) => {
+        let hex = '';
+        for (let i = 0; i < str.length; i++) {
+          const charCode = str.charCodeAt(i);
+          const hexValue = charCode.toString(16);
+
+          // Pad with zeros to ensure two-digit representation
+          hex += hexValue.padStart(2, '0');
+        }
+        return hex;
+      };
+
       function wsConnect() {
         var wsurl = $("#SERVER").val();
         var CP = $("#CP").val();
         console.log(wsurl + "" + CP);
         auth_key = $("#AKEY").val();
 
-        auth_data = btoa(CP + ':' + auth_key).replaceAll("=", "");
+        auth_data = stringToHex(CP + ':' + auth_key)
 
         if (_websocket) {
           $("#red").show();
@@ -323,6 +336,7 @@
                 console.log("TransactionId: " + JSON.stringify(transactionId));
                 document.getElementById("offer").value = 0
                 document.getElementById("ConnectorStatus").value = "SuspendedEVSE";
+                send_meterValue();
                 send_status_notification();
                 transaction_energy = 0; // Wh
                 transaction_energy_time = Date.now() / 1000; 
@@ -330,7 +344,8 @@
               }
               if (la === "stopTransaction") {
                 document.getElementById("ConnectorStatus").value = "Available";
-                document.getElementById("offer").value = 0
+                document.getElementById("offer").value = 0;
+                send_meterValue();
                 send_status_notification();
 
               }
@@ -340,7 +355,7 @@
               }
 
               if (la == "StatusNotification") {
-                send_meterValue();
+                
               }
 
               if (la == "Authorize") {
@@ -724,7 +739,8 @@
         if ($("#ConnectorStatus").val() == 'Charging') {
             elapsed = Date.now() / 1000 - transaction_energy_time;
             transaction_energy_time = Date.now() / 1000; 
-            transaction_energy += val * 3 * 230 * elapsed/3600
+            transaction_energy += val * 3 * 230 * elapsed/3600;
+            transaction_energy = Math.round(transaction_energy);
         }
 
         var MV_OBJ = 
